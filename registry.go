@@ -6,6 +6,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"strconv"
+	"text/tabwriter"
+
+	"github.com/dustin/go-humanize"
 )
 
 type Registry struct {
@@ -165,6 +170,54 @@ func (r *Registry) Manifest(image, tag string) ([]string, error) {
 	return blobs, nil
 }
 
+func (r *Registry) BlobSize(image, sum string) (int, error) {
+	resp, err := r.Client.Head(r.BaseURL + "/v2/" + image + "/blobs/" + sum)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		// decode error text if 4xx error code
+		return 0, errors.New(fmt.Sprintf("bad status ", resp.StatusCode))
+	}
+
+	// consume body to connect can be reused
+	ioutil.ReadAll(resp.Body)
+
+	digest := resp.Header.Get("Docker-Content-Digest")
+	if digest != sum {
+		return 0, errors.New("digest mismatch")
+	}
+
+	size, err := strconv.Atoi(resp.Header.Get("Content-Length"))
+	if err != nil {
+		return 0, err
+	}
+
+	return size, nil
+}
+
+func (r *Registry) ImageSize(image, tag string) (int, error) {
+	blobs, err := r.Manifest(image, tag)
+	if err != nil {
+		return 0, err
+	}
+
+	total := 0
+
+	for _, b := range blobs {
+		size, err := r.BlobSize(image, b)
+		if err != nil {
+			return 0, err
+		}
+
+		total += size
+	}
+
+	return total, nil
+}
+
 func main() {
 	registry := &Registry{
 		Client:  &http.Client{Transport: &http.Transport{}},
@@ -183,6 +236,9 @@ func main() {
 		return
 	}
 
+	w := new(tabwriter.Writer)
+	w.Init(os.Stdout, 0, 8, 0, '\t', 0)
+
 	for _, img := range images {
 		tags, err := registry.Tags(img)
 		if err != nil {
@@ -190,18 +246,10 @@ func main() {
 			return
 		}
 
-		for _, t := range tags {
-			fmt.Println(img + ":" + t)
-
-			blobs, err := registry.Manifest(img, t)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			for _, b := range blobs {
-				fmt.Println(b)
-			}
+		for _, tag := range tags {
+			size, _ := registry.ImageSize(img, tag)
+			fmt.Fprintf(w, "%s\t%s\t%8s\n", img, tag, humanize.Bytes(uint64(size)))
 		}
 	}
+	w.Flush()
 }
