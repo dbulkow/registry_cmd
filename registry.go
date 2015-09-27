@@ -147,7 +147,7 @@ func (r *Registry) Manifest(image, tag string) ([]string, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		// decode error text if 4xx error code
-		return nil, errors.New(fmt.Sprintf("bad status ", resp.StatusCode))
+		return nil, errors.New(fmt.Sprintln("bad status ", resp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -179,7 +179,7 @@ func (r *Registry) BlobSize(image, sum string) (int, error) {
 
 	if resp.StatusCode != http.StatusOK {
 		// decode error text if 4xx error code
-		return 0, errors.New(fmt.Sprintf("bad status ", resp.StatusCode))
+		return 0, errors.New(fmt.Sprintln("bad status ", resp.StatusCode))
 	}
 
 	// consume body to connect can be reused
