@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 )
 
@@ -23,26 +22,31 @@ type Tags struct {
 	Tags []string `json:"tags"`
 }
 
-func (r *Registry) Version() (string, error) {
+func (r *Registry) VerifyV2() error {
 	resp, err := r.Client.Get(r.BaseURL + "/v2/")
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
 		// error text in resp.Body
-		return "", errors.New("take action based on WWW-Authenticate")
+		return errors.New("take action based on WWW-Authenticate")
 	case http.StatusNotFound:
-		return "", errors.New("V2 of the registry API not implemented")
+		return errors.New("registry does not support v2 API")
 	case http.StatusOK:
 		break
 	default:
-		return "", errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
+		return errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
 	}
 
-	return resp.Header.Get("Docker-Distribution-API-Version"), nil
+	ver := resp.Header.Get("Docker-Distribution-API-Version")
+	if ver == "registry/2.0" {
+		return nil
+	}
+
+	return errors.New("registry does not support v2 API")
 }
 
 func (r *Registry) Catalog() ([]string, error) {
@@ -105,14 +109,9 @@ func main() {
 		BaseURL: "http://yin.mno.stratus.com:5000",
 	}
 
-	ver, err := registry.Version()
+	err := registry.VerifyV2()
 	if err != nil {
 		fmt.Println(err)
-		return
-	}
-
-	if ver == "registry/v2.0" {
-		fmt.Println("incorrect registry version")
 		return
 	}
 
