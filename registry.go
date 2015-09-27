@@ -218,6 +218,144 @@ func (r *Registry) ImageSize(image, tag string) (int, error) {
 	return total, nil
 }
 
+/*
+ * There's no safety on this function.  If you want a blob deleted, it
+ * will be removed from the server.
+ */
+func (r *Registry) DeleteBlob(image, sum string) error {
+	req, err := http.NewRequest("DELETE", r.BaseURL+"/v2/"+image+"/blobs/"+sum, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	// consume body to connect can be reused
+	ioutil.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		break
+	case http.StatusNotFound:
+		return errors.New("blob not found")
+	default:
+		return errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
+	}
+
+	length := resp.Header.Get("Content-Length")
+	if length != "None" {
+		return errors.New("protocol error - content length should read None, got " + length)
+	}
+
+	return nil
+}
+
+type Item struct {
+	Tags map[string][]string
+}
+
+func (r *Registry) DeleteImage(image, tag string) error {
+	inventory := make(map[string]*Item, 0)
+
+	images, err := r.Catalog()
+	if err != nil {
+		return err
+	}
+
+	for _, img := range images {
+		inventory[img] = &Item{}
+
+		tags, err := r.Tags(img)
+		if err != nil {
+			return err
+		}
+
+		inventory[img].Tags = make(map[string][]string, 1)
+		for _, t := range tags {
+			blobs, err := r.Manifest(img, t)
+			if err != nil {
+				return err
+			}
+
+			inventory[img].Tags[t] = blobs
+		}
+	}
+
+	overlap := make([]string, 0)
+
+	for _, img := range images {
+		if img == image {
+			continue
+		}
+
+		for t, blobs := range inventory[image].Tags {
+			if t == tag {
+				continue
+			}
+
+			for _, b := range blobs {
+				for _, mb := range inventory[image].Tags[tag] {
+					if b == mb {
+						overlap = append(overlap, b)
+					}
+				}
+			}
+		}
+	}
+
+	remainder := make([]string, 0)
+	for _, mb := range inventory[image].Tags[tag] {
+		for _, b := range overlap {
+			if b == mb {
+				continue
+			}
+			remainder = append(remainder, b)
+		}
+	}
+
+	for _, sum := range remainder {
+		err := r.DeleteBlob(image, sum)
+		if err != nil {
+			return err
+		}
+	}
+
+	// How to determine image:tag digest?
+	digest := ""
+
+	req, err := http.NewRequest("DELETE", r.BaseURL+"/v2/"+image+"/manifests/"+digest, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := r.Client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	// consume body to connect can be reused
+	ioutil.ReadAll(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusAccepted:
+		break
+	case http.StatusNotFound:
+		return errors.New("image not found")
+	default:
+		return errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
+	}
+
+	length := resp.Header.Get("Content-Length")
+	if length != "None" {
+		return errors.New("protocol error - content length should read None, got " + length)
+	}
+
+	return nil
+}
+
 func main() {
 	registry := &Registry{
 		Client:  &http.Client{Transport: &http.Transport{}},
