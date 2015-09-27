@@ -9,6 +9,11 @@ import (
 	"net/http"
 )
 
+type Registry struct {
+	Client  *http.Client
+	BaseURL string
+}
+
 type Catalog struct {
 	Repositories []string `json:"repositories"`
 }
@@ -18,8 +23,8 @@ type Tags struct {
 	Tags []string `json:"tags"`
 }
 
-func version(base string) (string, error) {
-	resp, err := http.Get(base + "/v2/")
+func (r *Registry) Version() (string, error) {
+	resp, err := http.Get(r.BaseURL + "/v2/")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,14 +38,14 @@ func version(base string) (string, error) {
 	case http.StatusOK:
 		break
 	default:
-		return "", errors.New(fmt.Sprintln("bad status (", base, "/v2/) ", resp.StatusCode))
+		return "", errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
 	}
 
 	return resp.Header.Get("Docker-Distribution-API-Version"), nil
 }
 
-func catalog(base string) ([]string, error) {
-	resp, err := http.Get(base + "/v2/_catalog")
+func (r *Registry) Catalog() ([]string, error) {
+	resp, err := http.Get(r.BaseURL + "/v2/_catalog")
 	if err != nil {
 		return nil, err
 	}
@@ -65,8 +70,8 @@ func catalog(base string) ([]string, error) {
 	return catalog.Repositories, nil
 }
 
-func tags(base, name string) ([]string, error) {
-	resp, err := http.Get(base + "/v2/" + name + "/tags/list")
+func (r *Registry) Tags(img string) ([]string, error) {
+	resp, err := http.Get(r.BaseURL + "/v2/" + img + "/tags/list")
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +97,12 @@ func tags(base, name string) ([]string, error) {
 }
 
 func main() {
-	base := "http://yin.mno.stratus.com:5000"
+	registry := &Registry{
+		Client:  &http.Client{},
+		BaseURL: "http://yin.mno.stratus.com:5000",
+	}
 
-	ver, err := version(base)
+	ver, err := registry.Version()
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -105,14 +113,14 @@ func main() {
 		return
 	}
 
-	images, err := catalog(base)
+	images, err := registry.Catalog()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
 	for _, img := range images {
-		tags, err := tags(base, img)
+		tags, err := registry.Tags(img)
 		if err != nil {
 			fmt.Println(err)
 			return
