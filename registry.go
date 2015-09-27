@@ -24,7 +24,7 @@ type Tags struct {
 }
 
 func (r *Registry) Version() (string, error) {
-	resp, err := http.Get(r.BaseURL + "/v2/")
+	resp, err := r.Client.Get(r.BaseURL + "/v2/")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func (r *Registry) Version() (string, error) {
 }
 
 func (r *Registry) Catalog() ([]string, error) {
-	resp, err := http.Get(r.BaseURL + "/v2/_catalog")
+	resp, err := r.Client.Get(r.BaseURL + "/v2/_catalog")
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func (r *Registry) Catalog() ([]string, error) {
 }
 
 func (r *Registry) Tags(img string) ([]string, error) {
-	resp, err := http.Get(r.BaseURL + "/v2/" + img + "/tags/list")
+	resp, err := r.Client.Get(r.BaseURL + "/v2/" + img + "/tags/list")
 	if err != nil {
 		return nil, err
 	}
