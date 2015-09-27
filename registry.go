@@ -111,8 +111,8 @@ func (r *Registry) Catalog() ([]string, error) {
 	return catalog.Repositories, nil
 }
 
-func (r *Registry) Tags(img string) ([]string, error) {
-	resp, err := r.Client.Get(r.BaseURL + "/v2/" + img + "/tags/list")
+func (r *Registry) Tags(image string) ([]string, error) {
+	resp, err := r.Client.Get(r.BaseURL + "/v2/" + image + "/tags/list")
 	if err != nil {
 		return nil, err
 	}
