@@ -32,6 +32,7 @@ func (r *Registry) Version() (string, error) {
 
 	switch resp.StatusCode {
 	case http.StatusUnauthorized:
+		// error text in resp.Body
 		return "", errors.New("take action based on WWW-Authenticate")
 	case http.StatusNotFound:
 		return "", errors.New("V2 of the registry API not implemented")
@@ -52,6 +53,7 @@ func (r *Registry) Catalog() ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// decode error text if 4xx error code
 		return nil, errors.New(fmt.Sprintln("bad status ", resp.StatusCode))
 	}
 
@@ -78,6 +80,7 @@ func (r *Registry) Tags(img string) ([]string, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
+		// decode error text if 4xx error code
 		return nil, errors.New(fmt.Sprintln("bad status ", resp.StatusCode))
 	}
 
