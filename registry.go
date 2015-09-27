@@ -41,6 +41,9 @@ func (r *Registry) VerifyV2() error {
 		return errors.New(fmt.Sprintln("bad status (", r.BaseURL, "/v2/) ", resp.StatusCode))
 	}
 
+	// consume body so connection can be reused
+	ioutil.ReadAll(resp.Body)
+
 	ver := resp.Header.Get("Docker-Distribution-API-Version")
 	if ver == "registry/2.0" {
 		return nil
@@ -105,7 +108,7 @@ func (r *Registry) Tags(img string) ([]string, error) {
 
 func main() {
 	registry := &Registry{
-		Client:  &http.Client{},
+		Client:  &http.Client{Transport: &http.Transport{}},
 		BaseURL: "http://yin.mno.stratus.com:5000",
 	}
 
