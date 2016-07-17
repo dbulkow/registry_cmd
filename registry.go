@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -223,6 +224,9 @@ func (r *Registry) ImageSize(image, tag string) (int, error) {
  * will be removed from the server.
  */
 func (r *Registry) DeleteBlob(image, sum string) error {
+	// set header to obtain correct digest to delete:
+	// Accept: application/vnd.docker.distribution.manifest.v2+json
+
 	req, err := http.NewRequest("DELETE", r.BaseURL+"/v2/"+image+"/blobs/"+sum, nil)
 	if err != nil {
 		return err
@@ -357,6 +361,14 @@ func (r *Registry) DeleteImage(image, tag string) error {
 }
 
 func main() {
+	var (
+		tls       = flag.Bool("tls", false, "Use TLS; implied by --tlsverify")
+		tlscacert = flag.String("tlscacert", "~/.docker/ca.pem", "Trust certs signed only by this CA")
+		tlscert   = flag.String("tlscert", "~/.docker/cert.pem", "Path to TLS certificate file")
+		tlskey    = flag.String("tlskey", "~/.docker/key.pem", "Path to TLS key file")
+		tlsverify = flag.Bool("tlsverify", false, "Use TLS and verify the remote")
+	)
+
 	registry := &Registry{
 		Client:  &http.Client{Transport: &http.Transport{}},
 		BaseURL: "http://yin.mno.stratus.com:5000",
