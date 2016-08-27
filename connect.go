@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/spf13/cobra"
 )
@@ -67,6 +69,35 @@ func get(conn *http.Client, url string, dec Decoder) error {
 	switch resp.StatusCode {
 	case http.StatusOK:
 	case http.StatusAccepted:
+	case http.StatusNotFound:
+		fmt.Println("Content-Type: ", resp.Header.Get("Content-Type"))
+		fmt.Println("Content-Length: ", resp.Header.Get("Contenet-Length"))
+		if strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
+			if resp.Header.Get("Contenet-Length") == "None" {
+				return fmt.Errorf("bad status: %s", http.StatusText(resp.StatusCode))
+			}
+
+			body, err := ioutil.ReadAll(resp.Body)
+			if err != nil {
+				return fmt.Errorf("readall: %v", err)
+			}
+
+			var rpy struct {
+				Errors []struct {
+					Code    string `json:"code"`
+					Message string `json:"message"`
+				} `json:"errors"`
+			}
+
+			if err := json.Unmarshal(body, &rpy); err != nil {
+				return fmt.Errorf("unmarshal not found: %v", err)
+			}
+
+			if len(rpy.Errors) == 1 {
+				return fmt.Errorf("not found: code \"%s\" message \"%s\"", rpy.Errors[0].Code, rpy.Errors[0].Message)
+			}
+		}
+		fallthrough
 	default:
 		return fmt.Errorf("bad status: %s", http.StatusText(resp.StatusCode))
 	}

@@ -73,13 +73,13 @@ func delete(cmd *cobra.Command, args []string) {
 			if strings.Compare(delimg, name+":"+tag) == 0 {
 				digest, _, err := manifest(conn, url, name, tag)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+					fmt.Fprintf(os.Stderr, "manifest: %v\n", err)
 					return
 				}
 
 				err = deleteImage(conn, url, name, digest)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+					fmt.Fprintf(os.Stderr, "delete: %v\n", err)
 					return
 				}
 
