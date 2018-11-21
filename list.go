@@ -19,7 +19,7 @@ func init() {
 	}
 
 	listCmd.Flags().BoolVarP(&getsize, "size", "s", false, "List image size")
-	listCmd.Flags().BoolVarP(&getdigest, "digest", "d", false, "List image size")
+	listCmd.Flags().BoolVarP(&getdigest, "digest", "d", false, "List image digest")
 	listCmd.Flags().BoolVarP(&usebytes, "bytes", "b", false, "Display sizes in bytes")
 
 	RootCmd.AddCommand(listCmd)
