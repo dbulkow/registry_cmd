@@ -60,6 +60,8 @@ func get(conn *http.Client, url string, dec Decoder) error {
 		return fmt.Errorf("new request: %v", err)
 	}
 
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+
 	resp, err := conn.Do(req)
 	if err != nil {
 		return fmt.Errorf("get: %v", err)
