@@ -7,7 +7,13 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const RegistryURI = "http://yin.mno.stratus.com:5000"
+func check_registry(cmd *cobra.Command, args []string) {
+	regvar := cmd.Flag("registry").Value.String()
+	if regvar == "" {
+		fmt.Fprintf(os.Stderr, "please set registry location")
+		os.Exit(1)
+	}
+}
 
 var RootCmd = &cobra.Command{
 	Use:   "regcmd",
@@ -20,17 +26,11 @@ REGISTRY            Base URL for registry
 REGISTRY_TLS_KEYS   Directory containing TLS keys
 REGISTRY_TLS_VERIFY Enable TLS verification
 `,
+	PersistentPreRun: check_registry,
 }
 
 func main() {
-	// REGISTRY=http://yin.mno.stratus.com:5000
-	// --registry http://yin.mno.stratus.com:5000
-	// XXX command connect http://yin.mno.stratus.com:5000
-
 	regvar := os.Getenv("REGISTRY")
-	if regvar == "" {
-		regvar = RegistryURI
-	}
 
 	RootCmd.PersistentFlags().StringVar(&regvar, "registry", regvar, "Base URL for registry")
 
