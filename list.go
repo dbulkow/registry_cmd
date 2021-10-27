@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/dustin/go-humanize"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/spf13/cobra"
 )
 
@@ -47,6 +47,10 @@ func list(cmd *cobra.Command, args []string) {
 	imageset := make([]*Image, 0)
 
 	images, err := catalog(conn, url)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
 
 	n := 0
 	for _, name := range images {
@@ -81,9 +85,10 @@ func list(cmd *cobra.Command, args []string) {
 			if getsize {
 				sz, err := imagesize(conn, url, i.name, t)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+					fmt.Fprintln(os.Stderr, "imagesize", err)
 					continue
 				}
+
 				if usebytes {
 					fmt.Printf(" %12d", sz)
 				} else {
@@ -94,7 +99,7 @@ func list(cmd *cobra.Command, args []string) {
 			if getdigest {
 				digest, _, err := manifest(conn, url, i.name, t)
 				if err != nil {
-					fmt.Fprintln(os.Stderr, err)
+					fmt.Fprintln(os.Stderr, "manifest", err)
 					continue
 				}
 				fmt.Printf(" %s", digest)

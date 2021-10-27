@@ -11,7 +11,7 @@ type Blob struct {
 	length string
 }
 
-func (b *Blob) Method() string { return http.MethodGet }
+func (b *Blob) Method() string { return http.MethodHead }
 
 func (b *Blob) SetHeaders(hdr *http.Header) {}
 

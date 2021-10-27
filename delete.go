@@ -61,6 +61,10 @@ func delete(cmd *cobra.Command, args []string) {
 	}
 
 	images, err := catalog(conn, url)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return
+	}
 
 	for _, name := range images {
 		tags, err := tags(conn, url, name)

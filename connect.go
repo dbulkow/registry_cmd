@@ -60,7 +60,7 @@ func get(conn *http.Client, url string, dec Decoder) error {
 		return fmt.Errorf("new request: %v", err)
 	}
 
-	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json")
+	req.Header.Add("Accept", "application/vnd.docker.distribution.manifest.v2+json,application/vnd.docker.distribution.manifest.list.v2+json")
 
 	resp, err := conn.Do(req)
 	if err != nil {
@@ -72,8 +72,8 @@ func get(conn *http.Client, url string, dec Decoder) error {
 	case http.StatusOK:
 	case http.StatusAccepted:
 	case http.StatusNotFound:
-		fmt.Println("Content-Type: ", resp.Header.Get("Content-Type"))
-		fmt.Println("Content-Length: ", resp.Header.Get("Contenet-Length"))
+		//fmt.Println("Content-Type: ", resp.Header.Get("Content-Type"))
+		//fmt.Println("Content-Length: ", resp.Header.Get("Content-Length"))
 		if strings.HasPrefix(resp.Header.Get("Content-Type"), "application/json") {
 			if resp.Header.Get("Contenet-Length") == "None" {
 				return fmt.Errorf("bad status: %s", http.StatusText(resp.StatusCode))

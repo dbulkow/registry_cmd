@@ -18,7 +18,12 @@ func (m *Manifest) SetHeaders(hdr *http.Header) {
 }
 
 func (m *Manifest) UnmarshalJSON(b []byte) error {
-	type Manifest struct {
+	type Layer struct {
+		MediaType string `json:"mediaType"`
+		Size      int    `json:"size"`
+		Digest    string `json:"digest"`
+	}
+	manifest := struct {
 		Architecture string `json:"architecture"`
 		FsLayers     []struct {
 			BlobSum string `json:"blobSum"`
@@ -26,8 +31,8 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 		History []struct {
 			V1Compatibility string `json:"v1Compatibility"`
 		} `json:"history"`
-		Name          string  `json:"name"`
-		SchemaVersion float64 `json:"schemaVersion"`
+		Name          string `json:"name"`
+		SchemaVersion int    `json:"schemaVersion"`
 		Signatures    []struct {
 			Header struct {
 				Alg string `json:"alg"`
@@ -42,19 +47,36 @@ func (m *Manifest) UnmarshalJSON(b []byte) error {
 			Protected string `json:"protected"`
 			Signature string `json:"signature"`
 		} `json:"signatures"`
-		Tag string `json:"tag"`
-	}
-
-	manifest := &Manifest{}
+		Tag       string `json:"tag"`
+		MediaType string `json:"mediaType"`
+		Config    struct {
+			MediaType string `json:"mediaType"`
+			Size      int    `json:"size"`
+			Digest    string `json:"digest"`
+		} `json:"config"`
+		Layers []Layer `json:"layers"`
+	}{}
 
 	err := json.Unmarshal(b, &manifest)
 	if err != nil {
 		return fmt.Errorf("unmarshal %v", err)
 	}
 
-	m.blobs = make([]string, 0)
-	for _, d := range manifest.FsLayers {
-		m.blobs = append(m.blobs, d.BlobSum)
+	switch manifest.SchemaVersion {
+	case 1:
+		m.blobs = make([]string, 0)
+		for _, d := range manifest.FsLayers {
+			m.blobs = append(m.blobs, d.BlobSum)
+		}
+
+	case 2:
+		m.blobs = make([]string, 0)
+		for _, layer := range manifest.Layers {
+			m.blobs = append(m.blobs, layer.Digest)
+		}
+
+	default:
+		return fmt.Errorf("unknown schema version %d", manifest.SchemaVersion)
 	}
 
 	return nil
